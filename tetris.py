@@ -282,6 +282,8 @@ def draw_window(surface, grid, score=0):
     surface.blit(label, (sx + 20, sy + 160))
     draw_grid(surface, grid)
 
+def hold_piece(shape):
+    pass
 
 def main():
     locked_positions = {}
@@ -290,6 +292,7 @@ def main():
     run = True
     current_piece = get_shape()
     next_piece = get_shape()
+    hold_piece
     clock = pygame.time.Clock()
     fall_time = 0
     fall_speed = 0.27  #TODO change?
