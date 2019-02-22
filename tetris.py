@@ -171,14 +171,16 @@ def convert_shape_format(shape):
     for i, pos in enumerate(positions):
         positions[i] = (pos[0] - 2, pos[1] - 4)
 
+    return positions
+
 
 def valid_space(shape, grid):
     accepted_pos = [[(j,i) for j in range(10) if grid[i][j] == (0, 0, 0)] for i in range(20)]
     accepted_pos = [j for sub in accepted_pos for j in sub]
 
-    formated = convert_shape_format(shape)
+    formatted = convert_shape_format(shape)
 
-    for pos in formated:
+    for pos in formatted:
         if pos not in accepted_pos:
             if pos[1] > -1:
                 return False
@@ -195,11 +197,13 @@ def check_lost(positions):
 
 
 def get_shape():
-    return Piece(5, 0, random.choice(shapes))
+    return Piece(5, 0, random.choice(shapes))  #TODO Implement Fisher Yates Shuffle
 
 
 def draw_text_middle(text, size, color, surface):
-    pass
+    font = pygame.font.SysFont('freesansbol.tff', size, bold=True)
+    label = font.render(text, 1, color)
+    surface.blit(label, (top_left_x + play_width/2 - (label.get_width()/2), top_left_y + play_height/2 - (label.get_height()/2)))
 
 
 def draw_grid(surface, grid):
@@ -207,25 +211,59 @@ def draw_grid(surface, grid):
     sy = top_left_y
 
     for i in range(len(grid)):
-        pygame.draw.line(surface, (128, 128, 128), (sx, sy + i * block_size), (sx + play_width, sy+ i * block_size))
+        pygame.draw.line(surface, (128, 128, 128), (sx, sy + i * block_size), (sx + play_width, sy + i * block_size))
         for j in range(len(grid[1])):
             pygame.draw.line(surface, (128, 128, 128), (sx + j * block_size, sy),
                              (sx + j * block_size, sy + play_height))
 
 
 def clear_rows(grid, locked):
-    pass
+    inc = 0
+
+    for i in range(len(grid)-1, -1, -1):
+        row = grid[i]
+        if (0, 0, 0) not in row:
+            inc += 1
+            ind = i
+
+            for j in range(len(row)):
+                try:
+                    del locked[(j, i)]
+                except:
+                    continue
+
+    if inc > 0:
+        for key in sorted(list(locked), key=lambda x: x[1])[::-1]:
+            x, y = key
+            if y < ind:
+                newkey = (x, y + inc)
+                locked[newkey] = locked.pop(key)
+
+    return inc
 
 
 def draw_next_shape(shape, surface):
-    pass
+    font = pygame.font.SysFont('freesansbol.tff', 30)
+    label = font.render('Next Piece', 1, (255, 255, 255))
+
+    sx = top_left_x + play_width + 50  #TODO remove hardcoded positions
+    sy = top_left_y + play_height/2 - 100
+    format_shape = shape.shape[shape.rotation % len(shape.shape)]
+
+    for i, line in enumerate(format_shape):
+        row = list(line)
+        for j, column in enumerate(row):
+            if column == '0':
+                pygame.draw.rect(surface, shape.color, (sx + j*block_size, sy + i*block_size, block_size, block_size), 0)
+
+    surface.blit(label, (sx + 10, sy - 30))  #TODO add borders to the pieces
 
 
-def draw_window(surface, grid):
+def draw_window(surface, grid, score=0):
     surface.fill((0, 0, 0))
 
     pygame.font.init()  # TODO again?
-    font = pygame.font.Sysfont('notosans', 60) #TODO make it work cross platform
+    font = pygame.font.SysFont('freesansbold.ttf', 60)  #TODO Custom font
     label = font.render('Tetris', 1, (255, 255, 255))
 
     surface.blit(label, (top_left_x + play_width / 2 - (label.get_width() / 2), 30))
@@ -233,18 +271,20 @@ def draw_window(surface, grid):
     for i in range(len(grid)):
         for j in range(len(grid[i])):
             pygame.draw.rect(surface, grid[i][j], (top_left_x + j*block_size, top_left_y +i*block_size, block_size, block_size), 0)
-
     pygame.draw.rect(surface, (255, 0, 0), (top_left_x, top_left_y, play_width, play_height), 5)
 
-    pygame.display.update()
+    font = pygame.font.SysFont('freesansbol.tff', 30)
+    label = font.render('Score: ' + str(score), 1, (255, 255, 255))
+
+    sx = top_left_x + play_width + 50  # TODO remove hardcoded positions
+    sy = top_left_y + play_height / 2 - 100
+
+    surface.blit(label, (sx + 20, sy + 160))
     draw_grid(surface, grid)
-    pygame.display.update()
 
 
 def main():
     locked_positions = {}
-    grid = create_grid(locked_positions)
-
 
     change_piece = False
     run = True
@@ -252,41 +292,101 @@ def main():
     next_piece = get_shape()
     clock = pygame.time.Clock()
     fall_time = 0
-    fall_speed = 0.27 #TODO change?
+    fall_speed = 0.27  #TODO change?
+    level_time = 0
+    score = 0
 
     while run:
         grid = create_grid(locked_positions)
         fall_time += clock.get_rawtime()
+        level_time += clock.get_rawtime()
         clock.tick()
+
+        if level_time/1000 > 5: #TODO leveling up by score???
+            level_time = 0
+            if level_time > 0.12:
+                level_time -= 0.005
+
+        if fall_time/1000 > fall_speed:
+            fall_time = 0
+            current_piece.y += 1
+            if not valid_space(current_piece, grid) and current_piece.y > 0:
+                current_piece.y -= 1
+                change_piece = True
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 run = False
 
             if event.type == pygame.KEYDOWN:
-                if pygame.event.key in (pygame.K_LEFT, pygame.K_a):
-                    if valid_space(current_piece.x - 1, grid):
-                        current_piece.x -= 1
-                        
-                if pygame.event.key in (pygame.K_RIGHT, pygame.K_d):
-                    if valid_space(current_piece.x + 1, grid):
+                if event.key in (pygame.K_LEFT, pygame.K_a):
+                    current_piece.x -= 1
+                    if not valid_space(current_piece, grid):
                         current_piece.x += 1
 
-                if pygame.event.key in (pygame.K_DOWN, pygame.K_s):
-                    if valid_space(current_piece.y + 1, grid):
-                        current_piece.y += 1
+                if event.key in (pygame.K_RIGHT, pygame.K_d):
+                    current_piece.x += 1
+                    if not valid_space(current_piece, grid):
+                        current_piece.x -= 1
 
-                if pygame.event.key in (pygame.K_UP, pygame.K_w):
-                    if valid_space(current_piece.rotation + 1, grid):
-                        current_piece.rotation += 1
+                if event.key in (pygame.K_DOWN, pygame.K_s): #TODO hold down to go faster
+                    current_piece.y += 1
+                    if not valid_space(current_piece, grid):
+                        current_piece.y -= 1
 
-        draw_window(win, grid)
+                if event.key in (pygame.K_UP, pygame.K_w):  #TODO implement spin support
+                    current_piece.rotation += 1
+                    if not valid_space(current_piece, grid):
+                        current_piece.rotation -= 1
+
+                if event.key in (pygame.K_q, pygame.K_ESCAPE):
+                    run = False
+
+        shape_pos = convert_shape_format(current_piece)
+
+        for i in range(len(shape_pos)):
+            x, y = shape_pos[i]
+            if y > -1:
+                grid[y][x] = current_piece.color
+
+        if change_piece:
+            for pos in shape_pos:
+                p = (pos[0], pos[1])
+                locked_positions[p] = current_piece.color
+
+            current_piece = next_piece
+            next_piece = get_shape()
+            change_piece = False
+
+            score += clear_rows(grid, locked_positions) * 10
+
+        draw_window(win, grid, score)
+        draw_next_shape(next_piece, win)
+        pygame.display.update()
+
+        if check_lost(locked_positions):
+            draw_text_middle("You Lost! :(", 80, (255, 255, 255), win)
+            pygame.display.update()
+            pygame.time.delay(1500)
+            run = False
+
+    #pygame.display.quit()
 
 
 def main_menu():
-    main(win)
+    run = True
+    while run:
+        win.fill((0, 0, 0))
+        draw_text_middle("Press any key to play", 60, (255, 255, 255), win)
+        pygame.display.update()
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                run = False
+            if event.type == pygame.KEYDOWN:
+                main()
+    pygame.display.quit()
 
 
-win = pygame.display.set_mode(s_width, s_height)
+win = pygame.display.set_mode((s_width, s_height))
 pygame.display.set_caption('Tetris')
-main_menu(win)  # start game
+main_menu()  # start game
