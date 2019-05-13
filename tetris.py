@@ -135,6 +135,7 @@ T = [['.....',
 shapes = [S, Z, I, O, J, L, T]
 shape_colors = [(0, 255, 0), (255, 0, 0), (0, 255, 255), (255, 255, 0), (255, 165, 0), (0, 0, 255), (128, 0, 128)]
 # index 0 - 6 represent shape
+bag = []
 
 
 class Piece(object):
@@ -147,7 +148,7 @@ class Piece(object):
 
 
 def create_grid(locked_positions={}):
-    grid = [[(0,0,0) for _ in range(10)] for _ in range(20)]
+    grid = [[(0, 0, 0) for _ in range(10)] for _ in range(20)]
 
     for i in range(len(grid)):
         for j in range(len(grid[i])):
@@ -197,7 +198,17 @@ def check_lost(positions):
 
 
 def get_shape():
-    return Piece(5, 0, random.choice(shapes))  #TODO Implement Fisher Yates Shuffle
+    global bag
+    if len(bag) == 0:
+        make_bag()
+    piece = random.choice(bag)
+    bag.remove(piece)
+    return Piece(5, 0, piece)  #TODO Implement Fisher Yates Shuffle
+
+
+def make_bag():
+    global bag
+    bag = shapes.copy()
 
 
 def draw_text_middle(text, size, color, surface):
@@ -259,6 +270,25 @@ def draw_next_shape(shape, surface):
     surface.blit(label, (sx + 10, sy - 30))  #TODO add borders to the pieces
 
 
+def draw_held_shape(shape, surface):
+    font = pygame.font.SysFont('freesansbol.tff', 30)
+    label = font.render('Held Piece', 1, (255, 255, 255))
+
+    sx = top_left_x - play_width + 50  #TODO remove hardcoded positions
+    sy = top_left_y + play_height/2 - 100
+
+    if shape is not None:
+        format_shape = shape.shape[shape.rotation % len(shape.shape)]
+
+        for i, line in enumerate(format_shape):
+            row = list(line)
+            for j, column in enumerate(row):
+                if column == '0':
+                    pygame.draw.rect(surface, shape.color, (sx + j*block_size, sy + i*block_size, block_size, block_size), 0)
+
+    surface.blit(label, (sx + 10, sy - 30))  #TODO add borders to the pieces
+
+
 def draw_window(surface, grid, score=0):
     surface.fill((0, 0, 0))
 
@@ -282,8 +312,16 @@ def draw_window(surface, grid, score=0):
     surface.blit(label, (sx + 20, sy + 160))
     draw_grid(surface, grid)
 
-def hold_piece(shape):
-    pass
+
+def hold_piece(current_piece, held_piece, next_piece):
+    if held_piece is None:
+        held_piece = current_piece
+        current_piece = next_piece
+        next_piece = get_shape()
+    else:
+        held_piece, current_piece = current_piece, held_piece
+    return current_piece, held_piece, next_piece
+
 
 def main():
     locked_positions = {}
@@ -292,7 +330,8 @@ def main():
     run = True
     current_piece = get_shape()
     next_piece = get_shape()
-    hold_piece
+    held_piece = None
+    hold_used = False
     clock = pygame.time.Clock()
     fall_time = 0
     fall_speed = 0.27  #TODO change?
@@ -342,6 +381,12 @@ def main():
                     if not valid_space(current_piece, grid):
                         current_piece.rotation -= 1
 
+                if event.key in (pygame.K_SPACE, pygame.K_h):
+                    if not hold_used:
+                        current_piece, held_piece, next_piece = hold_piece(current_piece, held_piece, next_piece)
+                        current_piece.x, current_piece.y = 5, 0
+                        hold_used = True
+
                 if event.key in (pygame.K_q, pygame.K_ESCAPE):
                     run = False
 
@@ -360,11 +405,13 @@ def main():
             current_piece = next_piece
             next_piece = get_shape()
             change_piece = False
+            hold_used = False
 
             score += clear_rows(grid, locked_positions) * 10
 
         draw_window(win, grid, score)
         draw_next_shape(next_piece, win)
+        draw_held_shape(held_piece, win)
         pygame.display.update()
 
         if check_lost(locked_positions):
