@@ -176,7 +176,7 @@ def convert_shape_format(shape):
 
 
 def valid_space(shape, grid):
-    accepted_pos = [[(j,i) for j in range(10) if grid[i][j] == (0, 0, 0)] for i in range(20)]
+    accepted_pos = [[(j, i) for j in range(10) if grid[i][j] == (0, 0, 0)] for i in range(20)]
     accepted_pos = [j for sub in accepted_pos for j in sub]
 
     formatted = convert_shape_format(shape)
@@ -203,7 +203,7 @@ def get_shape():
         make_bag()
     piece = random.choice(bag)
     bag.remove(piece)
-    return Piece(5, 0, piece)  #TODO Implement Fisher Yates Shuffle
+    return Piece(5, 0, piece)
 
 
 def make_bag():
@@ -257,7 +257,7 @@ def draw_next_shape(shape, surface):
     font = pygame.font.SysFont('freesansbol.tff', 30)
     label = font.render('Next Piece', 1, (255, 255, 255))
 
-    sx = top_left_x + play_width + 50  #TODO remove hardcoded positions
+    sx = top_left_x + play_width + 50
     sy = top_left_y + play_height/2 - 100
     format_shape = shape.shape[shape.rotation % len(shape.shape)]
 
@@ -267,14 +267,14 @@ def draw_next_shape(shape, surface):
             if column == '0':
                 pygame.draw.rect(surface, shape.color, (sx + j*block_size, sy + i*block_size, block_size, block_size), 0)
 
-    surface.blit(label, (sx + 10, sy - 30))  #TODO add borders to the pieces
+    surface.blit(label, (sx + 10, sy - 30))  # TODO add borders to the pieces
 
 
 def draw_held_shape(shape, surface):
     font = pygame.font.SysFont('freesansbol.tff', 30)
     label = font.render('Held Piece', 1, (255, 255, 255))
 
-    sx = top_left_x - play_width + 50  #TODO remove hardcoded positions
+    sx = top_left_x - play_width + 50
     sy = top_left_y + play_height/2 - 100
 
     if shape is not None:
@@ -286,14 +286,13 @@ def draw_held_shape(shape, surface):
                 if column == '0':
                     pygame.draw.rect(surface, shape.color, (sx + j*block_size, sy + i*block_size, block_size, block_size), 0)
 
-    surface.blit(label, (sx + 10, sy - 30))  #TODO add borders to the pieces
+    surface.blit(label, (sx + 10, sy - 30))  # TODO add borders to the pieces
 
 
 def draw_window(surface, grid, score=0):
     surface.fill((0, 0, 0))
 
-    pygame.font.init()  # TODO again?
-    font = pygame.font.SysFont('freesansbold.ttf', 60)  #TODO Custom font
+    font = pygame.font.SysFont('freesansbold.ttf', 60)
     label = font.render('Tetris', 1, (255, 255, 255))
 
     surface.blit(label, (top_left_x + play_width / 2 - (label.get_width() / 2), 30))
@@ -306,7 +305,7 @@ def draw_window(surface, grid, score=0):
     font = pygame.font.SysFont('freesansbol.tff', 30)
     label = font.render('Score: ' + str(score), 1, (255, 255, 255))
 
-    sx = top_left_x + play_width + 50  # TODO remove hardcoded positions
+    sx = top_left_x + play_width + 50
     sy = top_left_y + play_height / 2 - 100
 
     surface.blit(label, (sx + 20, sy + 160))
@@ -334,20 +333,13 @@ def main():
     hold_used = False
     clock = pygame.time.Clock()
     fall_time = 0
-    fall_speed = 0.27  #TODO change?
-    level_time = 0
     score = 0
 
     while run:
         grid = create_grid(locked_positions)
+        fall_speed = max((0.27 - int(score/50)*0.01), 0.10)
         fall_time += clock.get_rawtime()
-        level_time += clock.get_rawtime()
         clock.tick()
-
-        if level_time/1000 > 5: #TODO leveling up by score???
-            level_time = 0
-            if level_time > 0.12:
-                level_time -= 0.005
 
         if fall_time/1000 > fall_speed:
             fall_time = 0
@@ -371,12 +363,12 @@ def main():
                     if not valid_space(current_piece, grid):
                         current_piece.x -= 1
 
-                if event.key in (pygame.K_DOWN, pygame.K_s): #TODO hold down to go faster
+                if event.key in (pygame.K_DOWN, pygame.K_s):  # TODO hold down to go faster
                     current_piece.y += 1
                     if not valid_space(current_piece, grid):
                         current_piece.y -= 1
 
-                if event.key in (pygame.K_UP, pygame.K_w):  #TODO implement spin support
+                if event.key in (pygame.K_UP, pygame.K_w):
                     current_piece.rotation += 1
                     if not valid_space(current_piece, grid):
                         current_piece.rotation -= 1
@@ -419,8 +411,6 @@ def main():
             pygame.display.update()
             pygame.time.delay(1500)
             run = False
-
-    #pygame.display.quit()
 
 
 def main_menu():
